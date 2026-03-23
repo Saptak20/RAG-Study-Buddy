@@ -311,7 +311,7 @@ This project is deployed on [Render](https://render.com).
 
 **Saptak Mondal**
 B.Tech AIML — GLA University, Mathura
-[GitHub](https://github.com/your-username) · [LinkedIn](https://linkedin.com/in/your-profile)
+[GitHub](https://github.com/Saptak20) · [LinkedIn](https://linkedin.com/in/your-profile)
 
 ---
 
