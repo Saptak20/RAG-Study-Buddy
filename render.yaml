@@ -1,0 +1,92 @@
+# ==============================================================================
+# Render Blueprint Specification for RAG Study Buddy
+# https://render.com/docs/blueprint-spec
+# ==============================================================================
+
+services:
+  - type: web
+    name: rag-study-buddy
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # Note: Persistent Disks require a paid plan (Starter or higher) on Render.
+    plan: starter
+    healthCheckPath: /health
+    disk:
+      name: rag-study-buddy-data
+      mountPath: /app/data
+      sizeGB: 10
+    envVars:
+      - key: APP_ENV
+        value: production
+
+      # ------------------------------------------------------------------------
+      # External Managed Database (MongoDB Atlas)
+      # ------------------------------------------------------------------------
+      - key: MONGODB_URI
+        sync: false # Provide your MongoDB Atlas connection string in Render Dashboard
+      - key: MONGODB_DB_NAME
+        value: rag_study_buddy
+
+      # ------------------------------------------------------------------------
+      # Authentication & Security
+      # ------------------------------------------------------------------------
+      - key: JWT_SECRET_KEY
+        generateValue: true # Render automatically generates a secure 256-bit secret
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRE_MINUTES
+        value: "1440"
+
+      # ------------------------------------------------------------------------
+      # Upstream LLM Provider (Groq Cloud)
+      # ------------------------------------------------------------------------
+      - key: GROQ_API_KEY
+        sync: false # Provide your Groq API key in Render Dashboard
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+
+      # ------------------------------------------------------------------------
+      # CORS Whitelisting
+      # ------------------------------------------------------------------------
+      - key: CORS_ORIGINS
+        sync: false # Set to your deployed frontend domain (e.g. https://my-app.vercel.app)
+
+      # ------------------------------------------------------------------------
+      # Storage & Paths (Mounted to Persistent Disk)
+      # ------------------------------------------------------------------------
+      - key: FAISS_INDEX_PATH
+        value: /app/data/faiss_index
+      - key: DOCUMENT_STORAGE_PATH
+        value: /app/data/documents
+      - key: MAX_UPLOAD_SIZE_BYTES
+        value: "10485760"
+
+      # ------------------------------------------------------------------------
+      # RAG Pipeline Configuration
+      # ------------------------------------------------------------------------
+      - key: EMBEDDING_MODEL_NAME
+        value: all-MiniLM-L6-v2
+      - key: RETRIEVER_TOP_K
+        value: "3"
+      - key: RAG_MAX_CONTEXT_CHARS
+        value: "4000"
+      - key: CHAT_HISTORY_LIMIT
+        value: "10"
+      - key: CHUNK_SIZE
+        value: "1000"
+      - key: CHUNK_OVERLAP
+        value: "150"
+      - key: MAX_CHUNKS_PER_DOCUMENT
+        value: "5000"
+
+      # ------------------------------------------------------------------------
+      # Rate Limiting
+      # ------------------------------------------------------------------------
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+      - key: RATE_LIMIT_AUTH_PER_MINUTE
+        value: "30"
+      - key: RATE_LIMIT_UPLOAD_PER_MINUTE
+        value: "15"
+      - key: RATE_LIMIT_CHAT_PER_MINUTE
+        value: "45"

@@ -1,0 +1,6 @@
+{
+  "include": ["app", "tests"],
+  "exclude": ["**/__pycache__", "data"],
+  "venvPath": "/home/saptak/miniconda3/envs",
+  "venv": "rag-study-buddy"
+}

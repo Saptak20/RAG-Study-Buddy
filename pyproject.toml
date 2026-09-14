@@ -1,0 +1,2 @@
+[tool.ruff.lint]
+ignore = ["B008"] # FastAPI declares dependencies in function signatures.

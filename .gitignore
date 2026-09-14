@@ -1,0 +1,36 @@
+# Environment / secrets
+.env
+.env.local
+
+# Virtual environments
+.venv/
+venv/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Runtime data (uploads, FAISS indexes) - never commit
+data/
+data/documents/
+
+# Logs
+*.log
+
+# Local model / cache files
+.cache/
+models/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
