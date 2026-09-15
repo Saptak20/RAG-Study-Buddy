@@ -1,8 +1,3 @@
-Absolutely. Since this is the **RAG Study Buddy** backend, I’d make the README feel like a real modern AI product rather than a college-project README.
-
-Here’s a polished version you can drop directly into `README.md`:
-
-````markdown
 # 🧠 RAG Study Buddy
 
 > **Your personal AI study companion — grounded in your own documents.**
@@ -832,7 +827,3 @@ Give the repository a ⭐ and feel free to explore the architecture, implementat
 
 </p>
 ```
-
-### One thing I'd strongly recommend
-
-For the **GitHub version**, put a small visual banner/demo GIF immediately under the title. That will make this README feel *way* more like a polished AI product and less like “here is my backend, please admire my `requirements.txt`.” 😭
