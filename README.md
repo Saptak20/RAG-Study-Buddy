@@ -1,406 +1,707 @@
-# 📚 RAG Study Buddy
+Absolutely. Since this is the **RAG Study Buddy** backend, I’d make the README feel like a real modern AI product rather than a college-project README.
 
-> A production-oriented AI study assistant built with Retrieval-Augmented Generation (RAG). Ingest textbooks, lecture notes, and study guides in PDF, TXT, and Markdown formats, and receive grounded answers backed by verified academic citations with persistent chat memory.
+Here’s a polished version you can drop directly into `README.md`:
 
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-7.0-47A248?style=flat-square&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
-[![FAISS](https://img.shields.io/badge/FAISS-Vector%20Search-00599C?style=flat-square)](https://github.com/facebookresearch/faiss)
-[![Groq](https://img.shields.io/badge/Groq-LLaMA--3.3--70B-F05A28?style=flat-square)](https://groq.com/)
-[![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
+````markdown
+# 🧠 RAG Study Buddy
 
----
+> **Your personal AI study companion — grounded in your own documents.**
 
-## 📖 Table of Contents
+RAG Study Buddy is a production-oriented AI study assistant that lets students upload their **PDFs, lecture notes, TXT/Markdown files, and study material**, then ask questions and receive **context-aware answers with document-level citations**.
 
-- [Problem Statement](#-problem-statement)
-- [Key Features](#-key-features)
-- [System Architecture](#-system-architecture)
-- [Technology Stack](#-technology-stack)
-- [Repository Structure](#-repository-structure)
-- [Core Workflows](#-core-workflows)
-  - [1. Authentication \& Isolation](#1-authentication--isolation)
-  - [2. Document Ingestion \& FAISS Indexing](#2-document-ingestion--faiss-indexing)
-  - [3. Semantic Retrieval \& Ranking](#3-semantic-retrieval--ranking)
-  - [4. Grounded Generation \& Citation Engine](#4-grounded-generation--citation-engine)
-  - [5. Chat Memory Lifecycle](#5-chat-memory-lifecycle)
-- [Security \& Hardening](#-security--hardening)
-- [API Endpoints](#-api-endpoints)
-- [Environment Configuration](#-environment-configuration)
-- [Local Development Setup](#-local-development-setup)
-- [Docker Deployment](#-docker-deployment)
-- [Production Deployment (Render + MongoDB Atlas)](#-production-deployment-render--mongodb-atlas)
-- [Automated Testing](#-automated-testing)
-- [Known Limitations \& Future Roadmap](#-known-limitations--future-roadmap)
-- [License](#-license)
+Instead of blindly asking an LLM, RAG Study Buddy first searches your uploaded knowledge base, retrieves the most relevant content, and then gives that context to the LLM.
+
+The result?
+
+**Answers grounded in your actual study material — not random AI hallucinations.**
 
 ---
 
-## 🎯 Problem Statement
+## ✨ What Makes It Different?
 
-Traditional generative AI models hallucinate facts, fail to reference private study materials, and cannot cite specific page numbers from course textbooks or lecture notes.
+Most AI chat applications follow:
 
-**RAG Study Buddy** solves this by enforcing:
-1. **Zero Hallucinations on Missing Context**: If study materials do not contain the answer, the model explicitly acknowledges lack of context instead of fabricating information.
-2. **Backend-Governed Academic Citations**: The backend—never the LLM—constructs citation objects directly from retrieved chunk metadata, tracking filename, page numbers, and similarity scores.
-3. **Strict Multi-Tenant Isolation**: Passwords, documents, vector indexes, and chat sessions are strictly isolated per user using cryptographic hashing and verified JWT identities.
+```text
+User → LLM → Answer
+````
 
----
+RAG Study Buddy follows:
 
-## ✨ Key Features
+```text
+User
+  ↓
+Authentication
+  ↓
+Your Documents
+  ↓
+Document Processing
+  ↓
+Chunking
+  ↓
+Embeddings
+  ↓
+FAISS Vector Search
+  ↓
+Relevant Context
+  ↓
+LLaMA 3
+  ↓
+Grounded Answer + Citations
+```
 
-- **Document Ingestion Engine**:
-  - Supports **PDF**, **TXT**, and **Markdown (`.md`)** files with a streaming 10MB upload ceiling.
-  - Computes SHA-256 digests on ingest to prevent duplicate uploads per user while allowing identical uploads across distinct users.
-  - Retains precise page numbers for PDFs via `pypdf` and assigns `page = null` for TXT/MD files.
-- **Local Dense Embeddings & Vector Search**:
-  - Uses `sentence-transformers` (`all-MiniLM-L6-v2`) to produce 384-dimensional dense vectors locally without external embedding API costs or privacy leaks.
-  - Per-user and per-document isolated **FAISS `IndexFlatIP`** vector stores with normalized inner product (equivalent to cosine similarity).
-  - Parallel vector search across documents with metadata resolution.
-- **Grounded LLM Generation via Groq**:
-  - High-speed inference powered by the official Groq Python SDK with `llama-3.3-70b-versatile`.
-  - Context packing bounded to 4,000 characters to prevent prompt bloat and context clipping.
-  - Defends against prompt injection by isolating user documents into explicit untrusted context blocks.
-- **Trustworthy Citation Engine**:
-  - Generates structured citations including `document_id`, `filename`, `page`, `similarity_score`, and extracted `snippet` (~120 chars).
-  - Deduplicates citations occurring on the same document page by selecting the highest similarity score.
-- **Conversational Memory**:
-  - Persists full dialogue turns into MongoDB (`messages` collection).
-  - Maintains conversation coherence by injecting the 10 most recent messages into the LLM prompt.
-  - Provides endpoints for paginated chat history and atomic history deletion.
-- **API Hardening & Defense-in-Depth**:
-  - In-process sliding-window rate limiting on `/auth/*` (30 req/min), `/documents/upload` (15 req/min), and `/chat` (45 req/min).
-  - Pure ASGI defensive security headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`).
-  - Strict CORS origin whitelisting with credential support (wildcards strictly rejected).
-  - Separate liveness (`GET /health`) and readiness (`GET /health/ready` verifying MongoDB connectivity) probes.
-- **Production Dockerization**:
-  - Non-root user container execution (`appuser`, uid 999).
-  - Pre-cached model weights inside the Docker image to ensure instant, offline-capable cold starts.
-  - Dynamic port binding for container platforms (Render, Cloud Run, VPS).
+Every user's knowledge base is isolated, and citations are generated by the backend from the retrieved document metadata.
 
 ---
 
-## 🏗️ System Architecture
+# 🚀 Core Features
 
-```mermaid
-flowchart TD
-    subgraph Client["Client Tier"]
-        Browser["Web Browser / Client"]
-    end
+### 📚 Document-Based Learning
 
-    subgraph FastAPI["FastAPI Application (ASGI)"]
-        SecurityMW["SecurityHeadersMiddleware\n(nosniff, DENY, referrer)"]
-        CORSMW["CORSMiddleware\n(Configured Allowed Origins)"]
-        RateLimiter["InMemoryRateLimiter\n(Sliding Window)"]
-        AuthRouter["Auth Router\n(/auth/*)"]
-        DocRouter["Documents Router\n(/documents/*)"]
-        ChatRouter["Chat Router\n(/chat/*)"]
-        HealthRouter["Health Probes\n(/health, /health/ready)"]
-    end
+Upload your study material:
 
-    subgraph Services["Core Application Services"]
-        IngestionService["Document Ingestion\n(Validation, pypdf, TextSplitter)"]
-        EmbeddingService["Embeddings Engine\n(all-MiniLM-L6-v2, 384-dim)"]
-        RetrieverService["Retriever & Ranker\n(Cosine Similarity / IP)"]
-        CitationEngine["Citation Engine\n(Deduplication & Snippets)"]
-        ChatService["Chat Memory Manager"]
-    end
+* PDF
+* TXT
+* Markdown
+* Lecture notes
+* Study guides
+* Quiz sheets
 
-    subgraph Storage["Persistent Storage Tier"]
-        MongoDB[("MongoDB\n(Users, Documents, Messages)")]
-        FAISS_Store[("Filesystem / Persistent Disk\n(/app/data/faiss_index/\n/app/data/documents/)")]
-    end
+Documents are automatically:
 
-    subgraph External["External Services"]
-        GroqAPI["Groq Cloud API\n(LLaMA 3.3 70B Versatile)"]
-    end
+1. Validated
+2. Extracted
+3. Split into chunks
+4. Converted into embeddings
+5. Indexed in FAISS
+6. Stored with citation metadata
 
-    Browser --> SecurityMW
-    SecurityMW --> CORSMW
-    CORSMW --> RateLimiter
-    RateLimiter --> AuthRouter
-    RateLimiter --> DocRouter
-    RateLimiter --> ChatRouter
-    RateLimiter --> HealthRouter
+---
 
-    AuthRouter --> MongoDB
-    DocRouter --> IngestionService
-    IngestionService --> EmbeddingService
-    EmbeddingService --> FAISS_Store
-    IngestionService --> MongoDB
+### 🔎 Semantic Search
 
-    ChatRouter --> ChatService
-    ChatService --> MongoDB
-    ChatRouter --> RetrieverService
-    RetrieverService --> EmbeddingService
-    RetrieverService --> FAISS_Store
-    ChatRouter --> GroqAPI
-    ChatRouter --> CitationEngine
-    HealthRouter --> MongoDB
+Instead of searching for exact keywords, the system understands the **meaning** of your question.
+
+Powered by:
+
+* `all-MiniLM-L6-v2`
+* Sentence Transformers
+* FAISS
+* Cosine similarity
+
+Example:
+
+```text
+Question:
+"Explain why deadlock can occur in operating systems."
+
+        ↓
+
+Semantic Retrieval
+
+        ↓
+
+Relevant chunks from:
+Operating_Systems.pdf
+Pages 42, 43, 45
+
+        ↓
+
+LLM Context
+
+        ↓
+
+Grounded Answer
 ```
 
 ---
 
-## 🛠️ Technology Stack
+### 🤖 AI-Powered Answers
 
-| Component | Technology | Version | Rationale |
-|---|---|---|---|
-| **Language** | Python | `3.12` | Modern async typing, performance enhancements, and security patches. |
-| **API Framework** | FastAPI | `>=0.115.0` | High-throughput asynchronous routing, Pydantic v2 validation, OpenAPI generation. |
-| **ASGI Server** | Uvicorn | `>=0.32.0` | Production ASGI web server supporting dynamic port binding. |
-| **Database** | MongoDB | `7.0` | Flexible document store for user profiles, document metadata, and chat messages. |
-| **DB Driver** | PyMongo (Async API) | `>=4.9.0` | Native asynchronous PyMongo driver for non-blocking I/O. |
-| **Embeddings** | `sentence-transformers` | `>=3.0.0` | Local `all-MiniLM-L6-v2` dense embeddings without external API latency or costs. |
-| **Vector Index** | FAISS CPU | `>=1.8.0` | High-performance C++ vector index with inner-product cosine similarity search. |
-| **LLM Inference** | Groq Cloud SDK | `>=0.11.0` | Hardware-accelerated LPU inference running `llama-3.3-70b-versatile`. |
-| **PDF Extraction** | `pypdf` | `>=5.0.0` | Lightweight, secure page-by-page text parsing with metadata preservation. |
-| **Text Chunking** | `langchain-text-splitters` | `>=0.3.0` | Recursive character splitting with structural overlap. |
-| **Authentication** | `pyjwt` + `bcrypt` | `>=2.9.0` / `>=4.2.0` | Direct salted bcrypt hashing (factor 12) + signed HS256 JWT tokens. |
-| **Container** | Docker & Docker Compose | Modern | Multi-stage, non-root `appuser` (uid 999) with volume persistence. |
+The system uses:
+
+**LLaMA 3.3 70B via Groq**
+
+The LLM receives only the relevant retrieved context instead of the entire document collection.
+
+This improves:
+
+* Relevance
+* Context efficiency
+* Grounding
+* Response quality
 
 ---
 
-## 📁 Repository Structure
+### 📌 Source Citations
 
-```
-rag-study-buddy/
-├── app/
-│   ├── main.py                  # ASGI FastAPI application, middleware, lifecycle & health routes
-│   ├── api/
-│   │   ├── auth.py              # User registration, login, and current identity endpoints
-│   │   ├── documents.py         # Document upload, listing, details, and deletion endpoints
-│   │   └── chat.py              # Grounded RAG chat, paginated history, and clear history endpoints
-│   ├── core/
-│   │   ├── config.py            # Pydantic Settings management and environment validation
-│   │   ├── database.py          # Asynchronous MongoDB connection lifecycle and indexes
-│   │   ├── deps.py              # FastAPI dependency injection (auth, db, embeddings, LLM)
-│   │   ├── rate_limit.py        # In-process sliding-window rate limiting dependencies
-│   │   └── security.py          # Bcrypt password hashing and JWT token issuance/verification
-│   ├── models/
-│   │   ├── user.py              # MongoDB user record models
-│   │   ├── document.py          # Document metadata models
-│   │   └── chat.py              # Message turn models
-│   ├── rag/
-│   │   ├── citations.py         # Academic citation builder, deduplication & snippet extraction
-│   │   ├── context.py           # Context packing, boundary formatting & prompt injection defense
-│   │   ├── embeddings.py        # SentenceTransformers wrapper and FakeEmbeddings test harness
-│   │   ├── ingestion.py         # Multi-format parsing (PDF/TXT/MD) and text chunking
-│   │   ├── llm.py               # Groq LLaMA 3.3 integration and FakeLLM test harness
-│   │   ├── memory.py            # Chat message retrieval and context window formatting
-│   │   ├── retriever.py         # Multi-index parallel FAISS retrieval and score ranking
-│   │   └── vector_store.py      # FAISS index persistence and chunk metadata management
-│   ├── schemas/
-│   │   ├── auth.py              # Auth request and response schemas
-│   │   ├── chat.py              # Chat request, response, citation, and history schemas
-│   │   └── documents.py         # Document upload and list schemas
-│   └── services/
-│       ├── chat.py              # Chat persistence and history querying operations
-│       ├── documents.py         # Document ingestion, indexing, and cleanup orchestrator
-│       └── users.py             # User lookup, registration, and credential authentication
-├── data/                        # Persistent storage root (mounted in Docker / Render)
-│   ├── documents/               # Stored chunk metadata per user and document
-│   └── faiss_index/             # Persisted index.faiss and metadata.json files
-├── tests/                       # Complete automated verification suite (67 tests)
-│   ├── conftest.py              # Pytest fixtures and mock dependencies
-│   ├── test_audit.py            # End-to-end integration and security audit
-│   ├── test_auth.py             # User registration, login, and JWT validation tests
-│   ├── test_chat.py             # Grounded chat and LLM generation tests
-│   ├── test_citations.py        # Strict citation attribution and deduplication tests
-│   ├── test_database.py         # Database connectivity and index creation tests
-│   ├── test_documents.py        # Multi-format document ingestion tests
-│   ├── test_hardening.py        # Security headers, CORS, rate limiting, and readiness tests
-│   ├── test_health.py           # Health probe tests
-│   ├── test_memory.py           # Chat history persistence and windowing tests
-│   ├── test_retriever.py        # Multi-document vector retrieval tests
-│   └── test_vector_store.py     # FAISS vector store persistence and reload tests
-├── .dockerignore                # Docker build exclusions
-├── .env.example                 # Comprehensive environment variable configuration template
-├── .gitignore                   # Version control exclusions
-├── Dockerfile                   # Production container definition (non-root, pre-cached model)
-├── docker-compose.yml           # Multi-service stack (App + MongoDB 7.0)
-├── pyproject.toml               # Build configuration, pytest settings, and Ruff linter rules
-├── pyrightconfig.json           # Static type checking configuration
-├── render.yaml                  # Render Blueprint deployment definition with persistent disk
-├── requirements.txt             # Pinned production runtime dependencies
-├── requirements-dev.txt         # Development and testing tools
-└── README.md                    # Project documentation
-```
+Every response can include structured source information:
 
----
-
-## 🔄 Core Workflows
-
-### 1. Authentication & Isolation
-1. The client registers via `POST /auth/register` with email and password.
-2. The password is salted and hashed using direct `bcrypt` (factor 12) with null-byte truncation protection.
-3. The client logs in via `POST /auth/login` to obtain an `HS256` signed JWT access token containing the user's MongoDB `ObjectId` in the `sub` claim.
-4. Subsequent requests pass the token in the `Authorization: Bearer <token>` header.
-5. All file paths on disk are segmented using `sha256(user_id)` to eliminate path traversal vulnerabilities and ensure strict multi-tenant isolation:
-   - `data/documents/{user_segment}/{document_id}/chunks.json`
-   - `data/faiss_index/{user_segment}/{document_id}/index.faiss`
-
-### 2. Document Ingestion & FAISS Indexing
-1. `POST /documents/upload` streams document chunks directly to disk with a 10MB hard limit.
-2. A SHA-256 hash is computed across the file. If an identical file already exists for that user, HTTP 409 Conflict is returned.
-3. Extracted text is split into chunks using `RecursiveCharacterTextSplitter` (chunk size: 1000 characters, overlap: 150 characters).
-4. Each chunk retains source metadata: `chunk_id`, `document_id`, `user_id`, `filename`, `page`, and `text`.
-5. The dense embeddings (`all-MiniLM-L6-v2`) are generated and added to a dedicated FAISS `IndexFlatIP` index.
-6. The vector index and metadata are atomically committed to disk. If any step fails, partial files are purged and the document is marked as `failed` in MongoDB.
-
-### 3. Semantic Retrieval & Ranking
-1. When a user submits a question to `POST /chat`, the query is embedded using the local embedding model.
-2. The user's active document indexes are searched in parallel.
-3. Inner product similarity scores are computed for normalized vectors (cosine similarity: $[-1.0, 1.0]$).
-4. Retrieved chunks across documents are merged, ranked by similarity score descending, and trimmed to `RETRIEVER_TOP_K` (default: 3).
-
-### 4. Grounded Generation & Citation Engine
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Authenticated Student
-    participant API as FastAPI /chat
-    participant Retriever as FAISS Retriever
-    participant LLM as Groq Cloud (LLaMA 3.3)
-    participant Citations as Citation Engine
-    participant DB as MongoDB
-
-    User->>API: POST /chat {"message": "Explain mitosis"}
-    API->>DB: Fetch recent 10 messages (chat history)
-    DB-->>API: Recent turns
-    API->>Retriever: Search user FAISS indexes
-    Retriever-->>API: Top-K retrieved chunks with metadata
-
-    alt No relevant chunks found
-        API->>DB: Save user question & "I do not have enough context..."
-        API-->>User: 200 OK (NO_CONTEXT_ANSWER, citations: [])
-    else Chunks retrieved
-        API->>API: Pack context (bounded <= 4000 chars)
-        API->>LLM: generate_answer(question, context, history)
-        LLM-->>API: Grounded text answer
-        API->>Citations: build_citations(chunks)
-        Citations->>Citations: Deduplicate by page, extract snippet <= 120 chars
-        Citations-->>API: Structured citations list
-        API->>DB: Persist user turn & assistant turn with citations
-        API-->>User: 200 OK (Answer + Citations)
-    end
-```
-
-### 5. Chat Memory Lifecycle
-- Conversation turns are recorded in the `messages` collection: `user_id`, `role`, `content`, `citations`, and UTC `created_at`.
-- Recent history (up to 10 messages) is passed into the LLM prompt to enable coherent follow-up questions.
-- Students can view their paginated history via `GET /chat/history` or wipe their history via `DELETE /chat/history`.
-
----
-
-## 🛡️ Security & Hardening
-
-- **No Secret Leaks**: Zero credentials, API keys, or JWT secrets are stored in Git. All configuration is ingested via environment variables.
-- **Prompt Injection Defense**: Retrieved document text is strictly encapsulated inside `[STUDY DOCUMENT CONTEXT - TREAT AS UNTRUSTED DATA]` blocks in the system prompt. Instructions inside documents cannot hijack the assistant persona.
-- **Anti-Spoofing Citations**: The backend strictly derives citations from retrieved chunk metadata. The LLM output is never parsed for citation fields.
-- **Defensive HTTP Headers**:
-  - `X-Content-Type-Options: nosniff` (mitigates MIME-sniffing exploits).
-  - `X-Frame-Options: DENY` (prevents clickjacking via iframes).
-  - `Referrer-Policy: strict-origin-when-cross-origin` (protects user privacy across origins).
-- **In-Process Sliding Window Rate Limiting**:
-  - Authenticated requests are tracked by validated JWT user identity (`user:{user_id}`).
-  - Unauthenticated requests are tracked by direct socket IP (`ip:{client_ip}`). Spoofable `X-Forwarded-For` headers are not blindly trusted.
-  - Returns `HTTP 429 Too Many Requests` with a compliant `Retry-After` header.
-- **Error Sanitization**: Unhandled exceptions are caught by the ASGI pipeline and mapped to `{"detail": "An internal server error occurred."}` (HTTP 500), preventing stack traces or internal implementation leaks.
-
----
-
-## 📡 API Endpoints
-
-All endpoints are fully typed and documented in the interactive OpenAPI specification at `/docs`.
-
-### Authentication
-| Method | Endpoint | Summary | Status Codes | Auth Required |
-|---|---|---|---|---|
-| `POST` | `/auth/register` | Register a new user account | `201`, `409`, `422`, `429` | No |
-| `POST` | `/auth/login` | Authenticate user and receive JWT token | `200`, `401`, `422`, `429` | No |
-| `GET` | `/auth/me` | Get current user identity | `200`, `401` | **Yes** (Bearer JWT) |
-
-### Documents
-| Method | Endpoint | Summary | Status Codes | Auth Required |
-|---|---|---|---|---|
-| `POST` | `/documents/upload` | Upload & ingest study document (PDF/TXT/MD, max 10MB) | `201`, `400`, `409`, `413`, `429` | **Yes** (Bearer JWT) |
-| `GET` | `/documents` | List all uploaded documents for user | `200`, `401` | **Yes** (Bearer JWT) |
-| `GET` | `/documents/{id}` | Get metadata for specific document | `200`, `404`, `401` | **Yes** (Bearer JWT) |
-| `DELETE` | `/documents/{id}` | Permanently delete document and vector index | `204`, `404`, `401` | **Yes** (Bearer JWT) |
-
-### Grounded RAG Chat
-| Method | Endpoint | Summary | Status Codes | Auth Required |
-|---|---|---|---|---|
-| `POST` | `/chat` | Submit question, retrieve context, receive answer & citations | `200`, `401`, `422`, `429`, `502` | **Yes** (Bearer JWT) |
-| `GET` | `/chat/history` | Retrieve paginated conversation history | `200`, `401` | **Yes** (Bearer JWT) |
-| `DELETE` | `/chat/history` | Clear all conversation history for user | `200`, `401` | **Yes** (Bearer JWT) |
-
-### Health Probes
-| Method | Endpoint | Summary | Status Codes | Auth Required |
-|---|---|---|---|---|
-| `GET` | `/health` | Liveness probe (checks ASGI server responsiveness) | `200` | No |
-| `GET` | `/health/ready` | Readiness probe (verifies MongoDB connectivity) | `200`, `503` | No |
-
----
-
-## 💻 Example API Usage
-
-### 1. Register & Login
-```bash
-# Register
-curl -i -X POST http://localhost:8000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email": "student@example.com", "password": "secure_password_123"}'
-
-# Login
-TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "student@example.com", "password": "secure_password_123"}' | jq -r .access_token)
-
-# Verify identity
-curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8000/auth/me
-```
-
-### 2. Upload a Study Document
-```bash
-curl -i -X POST http://localhost:8000/documents/upload \
-  -H "Authorization: Bearer $TOKEN" \
-  -F "file=@biology_notes.pdf"
-```
-
-### 3. Ask a Grounded Question
-```bash
-curl -i -X POST http://localhost:8000/chat \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What is the function of the mitochondria according to my notes?"}'
-```
-
-*Example Response:*
 ```json
 {
-  "answer": "According to your notes, the mitochondria is the powerhouse of the cell, responsible for generating adenosine triphosphate (ATP) through cellular respiration.",
+  "filename": "Operating_Systems.pdf",
+  "page": 42
+}
+```
+
+Citation metadata is generated by the backend from the retrieval results.
+
+The LLM **does not control citation metadata**.
+
+This prevents the model from inventing sources.
+
+---
+
+### 💬 Persistent Chat Memory
+
+Conversations are stored in MongoDB.
+
+The assistant can use recent conversation history to understand follow-up questions.
+
+Example:
+
+```text
+You:
+What is deadlock?
+
+AI:
+Deadlock is a situation where...
+
+You:
+What are its four conditions?
+
+AI:
+The four necessary conditions are...
+```
+
+The second question can use the context of the previous conversation.
+
+---
+
+### 🔐 Secure Multi-User Architecture
+
+Each user gets an isolated knowledge space.
+
+The system enforces:
+
+```text
+User A
+ ├── Documents
+ ├── Chunks
+ └── FAISS Indexes
+
+User B
+ ├── Documents
+ ├── Chunks
+ └── FAISS Indexes
+```
+
+User A can never retrieve User B's documents.
+
+Authentication is handled through:
+
+* JWT
+* bcrypt password hashing
+* Authenticated route dependencies
+* User-scoped database queries
+* User-scoped filesystem paths
+* User-scoped FAISS indexes
+
+---
+
+# 🏗️ System Architecture
+
+```mermaid
+flowchart TB
+
+    Client["🌐 Client / Frontend"]
+
+    API["⚡ FastAPI Backend"]
+
+    Auth["🔐 JWT Authentication"]
+
+    Docs["📚 Document Service"]
+
+    Extract["📄 Document Extraction"]
+
+    Chunk["✂️ Recursive Chunking"]
+
+    Embed["🧠 Sentence Transformer<br/>all-MiniLM-L6-v2"]
+
+    FAISS["🔎 FAISS Vector Index"]
+
+    Mongo["🍃 MongoDB"]
+
+    Retriever["🎯 Retriever"]
+
+    Context["📦 Context Builder"]
+
+    Groq["🤖 LLaMA 3.3 70B<br/>via Groq"]
+
+    Citation["📌 Citation Builder"]
+
+    Client --> API
+
+    API --> Auth
+    API --> Docs
+
+    Docs --> Extract
+    Extract --> Chunk
+    Chunk --> Embed
+    Embed --> FAISS
+
+    Docs --> Mongo
+
+    API --> Retriever
+    Retriever --> FAISS
+    Retriever --> Mongo
+
+    Retriever --> Context
+    Context --> Groq
+
+    Retriever --> Citation
+
+    Groq --> API
+    Citation --> API
+
+    API --> Client
+```
+
+---
+
+# 🔄 RAG Pipeline
+
+```mermaid
+flowchart LR
+
+    A["📄 Upload Document"]
+    B["🔍 Validate"]
+    C["📖 Extract Text"]
+    D["✂️ Chunk"]
+    E["🧠 Generate Embeddings"]
+    F["🔎 FAISS Index"]
+    
+    A --> B --> C --> D --> E --> F
+```
+
+When the user asks a question:
+
+```mermaid
+flowchart LR
+
+    Q["❓ User Question"]
+
+    QE["🧠 Query Embedding"]
+
+    S["🔎 Semantic Search"]
+
+    R["🎯 Top-K Chunks"]
+
+    C["📦 Context Builder"]
+
+    L["🤖 LLaMA 3.3"]
+
+    A["💡 Grounded Answer"]
+
+    SRC["📌 Backend Citations"]
+
+    Q --> QE
+    QE --> S
+    S --> R
+    R --> C
+    C --> L
+    L --> A
+    R --> SRC
+
+    A --> OUT["📤 API Response"]
+    SRC --> OUT
+```
+
+---
+
+# 🧩 Architecture Philosophy
+
+RAG Study Buddy intentionally avoids unnecessary infrastructure complexity.
+
+### We don't use:
+
+* ❌ Microservices
+* ❌ Kubernetes
+* ❌ Redis
+* ❌ Message queues
+* ❌ Complex agent frameworks
+* ❌ Deprecated `RetrievalQA`
+* ❌ External embedding APIs
+
+Instead:
+
+```text
+FastAPI
+   +
+MongoDB
+   +
+FAISS
+   +
+Sentence Transformers
+   +
+Groq
+```
+
+Simple enough to understand.
+
+Powerful enough to deploy.
+
+---
+
+# 🛠️ Tech Stack
+
+| Layer            | Technology                |
+| ---------------- | ------------------------- |
+| Backend          | FastAPI                   |
+| Language         | Python 3.12               |
+| Database         | MongoDB                   |
+| Authentication   | JWT + bcrypt              |
+| Vector Database  | FAISS                     |
+| Embeddings       | Sentence Transformers     |
+| Embedding Model  | all-MiniLM-L6-v2          |
+| LLM              | LLaMA 3.3 70B             |
+| LLM Provider     | Groq                      |
+| RAG              | Custom Retrieval Pipeline |
+| Containerization | Docker                    |
+| Deployment       | Render                    |
+| Testing          | Pytest                    |
+| Code Quality     | Ruff                      |
+
+---
+
+# 📁 Project Structure
+
+```text
+rag-study-buddy/
+│
+├── app/
+│   ├── api/
+│   │   ├── auth.py
+│   │   ├── chat.py
+│   │   └── documents.py
+│   │
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── dependencies.py
+│   │   └── security.py
+│   │
+│   ├── rag/
+│   │   ├── embeddings.py
+│   │   ├── retriever.py
+│   │   ├── context.py
+│   │   └── llm.py
+│   │
+│   ├── services/
+│   │   ├── chat.py
+│   │   ├── documents.py
+│   │   └── users.py
+│   │
+│   ├── schemas/
+│   │
+│   └── main.py
+│
+├── tests/
+│
+├── data/
+│   ├── documents/
+│   └── faiss_index/
+│
+├── Dockerfile
+├── docker-compose.yml
+├── render.yaml
+├── requirements.txt
+├── requirements-dev.txt
+├── pyproject.toml
+├── .env.example
+└── README.md
+```
+
+---
+
+# 🔐 Security Model
+
+Security is treated as a core part of the architecture rather than an afterthought.
+
+### Authentication
+
+```text
+Register
+   ↓
+bcrypt Password Hash
+   ↓
+MongoDB
+
+Login
+   ↓
+JWT
+   ↓
+Authenticated Requests
+```
+
+### Authorization
+
+The authenticated user's identity comes from the validated JWT.
+
+```text
+JWT
+ ↓
+user_id
+ ↓
+Mongo Query
+ ↓
+Filesystem
+ ↓
+FAISS
+```
+
+Client-provided user IDs are never trusted.
+
+---
+
+# 🛡️ API Hardening
+
+The backend includes:
+
+* JWT authentication
+* Request validation
+* Upload size limits
+* File-type allowlists
+* Path traversal protection
+* Rate limiting
+* CORS configuration
+* Security response headers
+* Safe error responses
+* MongoDB readiness checks
+* Input bounds
+* FAISS corruption handling
+* Failed indexing cleanup
+* Prompt-injection-resistant context handling
+
+Security headers include:
+
+```text
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Referrer-Policy: strict-origin-when-cross-origin
+```
+
+---
+
+# 🧪 Testing
+
+The project includes automated tests covering:
+
+* Health checks
+* MongoDB integration
+* Authentication
+* JWT validation
+* Document uploads
+* PDF extraction
+* Chunking
+* Duplicate detection
+* Embeddings
+* FAISS indexing
+* Retrieval
+* Cross-user isolation
+* Citations
+* Chat memory
+* API security
+* Rate limiting
+* Failure handling
+
+Run:
+
+```bash
+pytest
+```
+
+Code quality:
+
+```bash
+ruff check .
+```
+
+---
+
+# 🐳 Run with Docker
+
+Clone the repository:
+
+```bash
+git clone https://github.com/Saptak20/RAG-Study-Buddy.git
+cd RAG-Study-Buddy
+```
+
+Create your environment file:
+
+```bash
+cp .env.example .env
+```
+
+Add:
+
+```env
+MONGODB_URI=your_mongodb_uri
+JWT_SECRET_KEY=your_secret
+GROQ_API_KEY=your_groq_key
+```
+
+Start the application:
+
+```bash
+docker compose up --build
+```
+
+The API will be available at:
+
+```text
+http://localhost:8000
+```
+
+Health check:
+
+```text
+GET /health
+```
+
+---
+
+# ☁️ Deployment
+
+The application is containerized and designed for deployment on **Render**.
+
+Production architecture:
+
+```text
+                    Internet
+                       │
+                       ▼
+                ┌─────────────┐
+                │   Render    │
+                │   Web App   │
+                └──────┬──────┘
+                       │
+             ┌─────────┴─────────┐
+             │                   │
+             ▼                   ▼
+       ┌───────────┐       ┌────────────┐
+       │ MongoDB   │       │   Groq     │
+       │   Atlas   │       │   LLaMA 3  │
+       └───────────┘       └────────────┘
+             ▲
+             │
+       Application Data
+             │
+       ┌──────────────┐
+       │ Persistent   │
+       │ Disk         │
+       │              │
+       │ Documents    │
+       │ FAISS Index  │
+       └──────────────┘
+```
+
+The persistent disk is required because FAISS indexes and uploaded document data are filesystem-backed.
+
+---
+
+# 📡 API Overview
+
+### Authentication
+
+```http
+POST /auth/register
+POST /auth/login
+GET  /auth/me
+```
+
+### Documents
+
+```http
+POST   /documents/upload
+GET    /documents
+DELETE /documents/{document_id}
+```
+
+### Chat
+
+```http
+POST   /chat
+GET    /chat/history
+DELETE /chat/history
+```
+
+### Health
+
+```http
+GET /health
+GET /health/ready
+```
+
+---
+
+# ⚡ Example RAG Interaction
+
+### Upload
+
+```text
+Operating Systems.pdf
+        ↓
+     12.4 MB
+        ↓
+Text Extraction
+        ↓
+     184 chunks
+        ↓
+Embeddings
+        ↓
+FAISS Index
+```
+
+### Ask
+
+```text
+"What are the necessary conditions for deadlock?"
+```
+
+### Retrieval
+
+```text
+Top-K Results
+
+1. Operating Systems.pdf — Page 42
+2. Operating Systems.pdf — Page 43
+3. Operating Systems.pdf — Page 45
+```
+
+### Generation
+
+```text
+Retrieved Context
+       ↓
+LLaMA 3.3 70B
+       ↓
+Grounded Response
+```
+
+### Response
+
+```json
+{
+  "answer": "Deadlock requires four necessary conditions...",
   "sources": [
     {
-      "document_id": "673f1a2b8c9d0e1f2a3b4c5d",
-      "filename": "biology_notes.pdf",
-      "page": 4,
-      "chunk_id": "673f1a2b8c9d0e1f2a3b4c5d_chunk_3",
-      "similarity_score": 0.8842,
-      "score": 0.8842,
-      "snippet": "Mitochondria generate most of the cell's supply of adenosine triphosphate (ATP), used as a source of chemical energy."
-    }
-  ],
-  "citations": [
+      "filename": "Operating Systems.pdf",
+      "page": 42
+    },
     {
-      "document_id": "673f1a2b8c9d0e1f2a3b4c5d",
-      "filename": "biology_notes.pdf",
-      "page": 4,
-      "chunk_id": "673f1a2b8c9d0e1f2a3b4c5d_chunk_3",
-      "similarity_score": 0.8842,
-      "score": 0.8842,
-      "snippet": "Mitochondria generate most of the cell's supply of adenosine triphosphate (ATP), used as a source of chemical energy."
+      "filename": "Operating Systems.pdf",
+      "page": 43
     }
   ]
 }
@@ -408,167 +709,130 @@ curl -i -X POST http://localhost:8000/chat \
 
 ---
 
-## ⚙️ Environment Configuration
+# 🧠 Design Principles
 
-Copy `.env.example` to create your local `.env`:
-```bash
-cp .env.example .env
-```
+### 1. Ground the model
 
-| Variable | Type | Default | Description |
-|---|---|---|---|
-| `GROQ_API_KEY` | String | **Required in Prod** | Groq Cloud API key for LLaMA 3.3 inference. |
-| `MONGODB_URI` | String | `mongodb://localhost:27017` | MongoDB connection string (Atlas URI in production). |
-| `MONGODB_DB_NAME` | String | `rag_study_buddy` | Target MongoDB database name. |
-| `JWT_SECRET_KEY` | String | **Required in Prod** | Secret key for signing HMAC-SHA256 JWT tokens (min 32 chars). |
-| `JWT_ALGORITHM` | String | `HS256` | JWT signing algorithm. |
-| `JWT_EXPIRE_MINUTES`| Integer | `1440` (24h) | JWT access token validity period in minutes. |
-| `CORS_ORIGINS` | String | `http://localhost:3000,http://localhost:5173` | Comma-separated list of allowed web origins. |
-| `RATE_LIMIT_ENABLED`| Boolean | `true` | Enables in-process sliding window rate limiting. |
-| `PORT` | Integer | `8000` | Port for the ASGI server (set dynamically in cloud platforms). |
-| `DOCUMENT_STORAGE_PATH` | Path | `./data/documents` | Storage directory for document chunks. |
-| `FAISS_INDEX_PATH` | Path | `./data/faiss_index` | Storage directory for FAISS vector index files. |
-| `EMBEDDING_MODEL_NAME` | String | `all-MiniLM-L6-v2` | SentenceTransformer model for dense embedding generation. |
-| `RETRIEVER_TOP_K` | Integer | `3` | Maximum number of chunks retrieved per question. |
-| `GROQ_MODEL` | String | `llama-3.3-70b-versatile` | Upstream Groq model for RAG response generation. |
-| `RAG_MAX_CONTEXT_CHARS` | Integer | `4000` | Character ceiling for packed context injected into prompt. |
-| `CHAT_HISTORY_LIMIT`| Integer | `10` | Number of previous conversation messages injected into LLM context. |
+The LLM should answer from retrieved evidence whenever possible.
 
----
+### 2. Keep citations deterministic
 
-## 🚀 Local Development Setup
+The backend owns citation metadata.
 
-### 1. Prerequisites
-- Python `3.12`
-- Local MongoDB running on `localhost:27017` (or Docker)
-- Groq API Key ([console.groq.com](https://console.groq.com))
+### 3. Isolate users
 
-### 2. Installation
-```bash
-# Create and activate virtual environment
-python -m venv .venv
-source .venv/bin/activate
+Every user's documents, chunks, and vector indexes are scoped to that user.
 
-# Install dependencies
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
+### 4. Fail safely
 
-# Start FastAPI in development mode with hot reload
-uvicorn app.main:app --reload --port 8000
-```
+External failures should produce controlled API errors rather than crashes.
+
+### 5. Avoid unnecessary complexity
+
+Architecture should solve the actual problem, not win a diagram competition.
+
+### 6. Make the system replaceable
+
+LLM and embedding services are abstracted so implementations can be swapped later.
 
 ---
 
-## 🐳 Docker Deployment
+# 🗺️ Roadmap
 
-The application includes a production-ready `Dockerfile` and `docker-compose.yml`.
+### ✅ Completed
 
-### 1. Build and Run Full Stack (Application + MongoDB 7.0)
-```bash
-# Start containerized services
-docker compose up -d --build
+* [x] FastAPI backend
+* [x] MongoDB integration
+* [x] JWT authentication
+* [x] Document ingestion
+* [x] PDF/TXT/Markdown support
+* [x] Chunking
+* [x] Local embeddings
+* [x] FAISS vector search
+* [x] RAG generation
+* [x] Groq integration
+* [x] Source citations
+* [x] Persistent chat memory
+* [x] Security hardening
+* [x] Docker
+* [x] Production configuration
+* [x] Render deployment configuration
 
-# View container logs
-docker compose logs -f app
+### 🔮 Planned
 
-# Inspect container status
-docker compose ps
-```
-- **Application URL**: `http://localhost:8000`
-- **Interactive Documentation**: `http://localhost:8000/docs`
-- **Liveness Probe**: `http://localhost:8000/health`
-- **Readiness Probe**: `http://localhost:8000/health/ready`
-
-### 2. Standalone Container Execution
-```bash
-# Build production Docker image
-docker build -t rag-study-buddy .
-
-# Run container with volume mount for persistent data
-docker run -d \
-  -p 8000:8000 \
-  --env-file .env \
-  -v $(pwd)/data:/app/data \
-  --name rag-study-buddy \
-  rag-study-buddy
-```
-
-### 3. Teardown
-```bash
-# Stop and remove containers and network
-docker compose down
-
-# Stop containers and purge MongoDB persistent volume
-docker compose down -v
-```
+* [ ] React / Next.js frontend
+* [ ] Interactive study dashboard
+* [ ] AI-generated quizzes
+* [ ] Adaptive learning
+* [ ] Flashcards
+* [ ] Anki export
+* [ ] YouTube transcript ingestion
+* [ ] Voice interaction
+* [ ] Document sharing
+* [ ] Personalized learning roadmap
+* [ ] Study analytics
 
 ---
 
-## ☁️ Production Deployment (Render + MongoDB Atlas)
+# 🎯 Future Vision
 
-The repository provides a complete, tested [Render Blueprint](https://render.com/docs/blueprint-spec) in [`render.yaml`](render.yaml).
+RAG Study Buddy is designed to evolve from a document-question-answering system into a complete **AI learning environment**.
 
-### Critical Storage Architecture for Render
-> [!IMPORTANT]
-> Render Web Services use ephemeral container filesystems by default. Because RAG Study Buddy stores extracted document chunks and FAISS indexes on disk, **a persistent Render Disk mounted at `/app/data` is strictly required**. Persistent disks require a paid Render instance plan (Starter or higher).
-
-### Deployment Steps
-
-1. **Set Up MongoDB Atlas**:
-   - Create a free or dedicated cluster on [MongoDB Atlas](https://www.mongodb.com/atlas).
-   - Create a database user and whitelist Render outbound IPs (or `0.0.0.0/0` with strong password authentication).
-   - Obtain your connection URI: `mongodb+srv://<user>:<password>@cluster.mongodb.net/?retryWrites=true&w=majority`.
-
-2. **Deploy via Render Blueprint**:
-   - Push this repository to GitHub.
-   - In the [Render Dashboard](https://dashboard.render.com/), select **New** > **Blueprint**.
-   - Connect your GitHub repository. Render reads [`render.yaml`](render.yaml) automatically.
-   - Configure the prompted secret environment variables:
-     - `MONGODB_URI`: Your MongoDB Atlas connection URI.
-     - `GROQ_API_KEY`: Your Groq Cloud API key.
-     - `CORS_ORIGINS`: Your frontend domain (e.g. `https://studybuddy.vercel.app`).
-   - `JWT_SECRET_KEY` is automatically generated by Render as a cryptographically secure random string.
-
-3. **Verify Deployment**:
-   - Liveness: `https://your-service.onrender.com/health` (returns `{"status": "ok"}`).
-   - Readiness: `https://your-service.onrender.com/health/ready` (returns `{"status": "ready", "database": "connected"}`).
-
----
-
-## 🧪 Automated Testing
-
-The repository contains a test suite of **67 unit and integration tests** verifying authentication, multi-format ingestion, FAISS indexing, multi-document retrieval, citation deduplication, chat memory, security headers, rate limiting, and error shielding.
-
-```bash
-# Run the complete test suite
-pytest -q
-
-# Run with verbose output and test names
-pytest -v
-
-# Run linting and code quality checks
-ruff check .
-
-# Check for git formatting or whitespace anomalies
-git diff --check
+```text
+                  RAG Study Buddy
+                        │
+       ┌────────────────┼────────────────┐
+       │                │                │
+       ▼                ▼                ▼
+   📚 Documents      🤖 AI Tutor      🧠 Memory
+       │                │                │
+       └────────────────┼────────────────┘
+                        │
+                        ▼
+                🎓 Personalized
+                  Learning
+                        │
+          ┌─────────────┼─────────────┐
+          ▼             ▼             ▼
+       Quizzes       Flashcards    Roadmaps
+          │             │             │
+          └─────────────┼─────────────┘
+                        ▼
+                  Better Learning
 ```
 
 ---
 
-## 🔭 Known Limitations & Future Roadmap
+# 👨‍💻 Author
 
-### Known Architectural Characteristics
-1. **In-Process Rate Limiting**: The sliding-window rate limiter runs in-process in memory. For horizontally autoscaled deployments across multiple concurrent container instances, an external distributed cache (such as Redis) would be required to enforce global limits.
-2. **Filesystem-Backed FAISS**: Vector stores are serialized to disk per user and per document. In serverless environments (e.g. AWS Lambda), a managed vector database (such as Pinecone, Qdrant, or MongoDB Atlas Vector Search) would be needed.
+**Saptak Mondal**
 
-### Planned Enhancements
-- [ ] **Frontend Web Application**: Next.js / React interactive study portal.
-- [ ] **Quiz & Flashcard Generation**: Automatic generation of multiple-choice questions and Anki flashcards from uploaded course notes.
-- [ ] **Hybrid Retrieval**: Combining dense FAISS retrieval with BM25 keyword search.
-- [ ] **Document Sharing**: Secure permission-based sharing of study materials across study groups.
+B.Tech CSE — AI/ML & IoT
+
+Interested in:
+
+* AI Engineering
+* Machine Learning
+* RAG Systems
+* Backend Engineering
+* System Design
+* Computer Vision
 
 ---
 
-## 📄 License
+## ⭐ If you find this project interesting
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+Give the repository a ⭐ and feel free to explore the architecture, implementation, and ideas behind the system.
+
+---
+
+<p align="center">
+
+**Built with Python • FastAPI • MongoDB • FAISS • Sentence Transformers • LLaMA 3 • Groq**
+
+</p>
+```
+
+### One thing I'd strongly recommend
+
+For the **GitHub version**, put a small visual banner/demo GIF immediately under the title. That will make this README feel *way* more like a polished AI product and less like “here is my backend, please admire my `requirements.txt`.” 😭
