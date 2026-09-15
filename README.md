@@ -826,4 +826,4 @@ Give the repository a ⭐ and feel free to explore the architecture, implementat
 **Built with Python • FastAPI • MongoDB • FAISS • Sentence Transformers • LLaMA 3 • Groq**
 
 </p>
-```
+
